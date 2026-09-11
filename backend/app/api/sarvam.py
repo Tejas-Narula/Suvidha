@@ -47,8 +47,8 @@ async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify
         from app.utils.ids import generate_session_id
         session_id = generate_session_id()
         session = session_manager.create_session(session_id)
-        session.service_id = request.service_type
-        session.collected_data = request.model_dump(exclude={"service_type", "case_reference", "submission_id"})
+        session.service_id = request.service_type or "unknown"
+        session.collected_data = request.model_dump(exclude={"service_type", "case_reference", "submission_id", "provided_field", "provided_value"})
         session.submission_id = submission_id
         session.status = "received"
         
