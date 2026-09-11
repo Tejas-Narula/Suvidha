@@ -52,6 +52,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           const inputEl = el as HTMLInputElement | HTMLTextAreaElement;
           inputEl.focus();
           
+          // Force value update using native setters
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
           const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
           
@@ -63,8 +64,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             inputEl.value = field.value;
           }
           
+          // Dispatch full spectrum of events for strict validation (jQuery/React/Angular)
+          inputEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+          inputEl.dispatchEvent(new KeyboardEvent('keypress', { bubbles: true, key: 'a' }));
           inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+          inputEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'a' }));
           inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+          inputEl.blur();
         } else if (field.action === 'select_option' || field.input_type === 'dropdown') {
           const selectEl = el as HTMLSelectElement;
           selectEl.focus();
