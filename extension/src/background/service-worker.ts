@@ -10,7 +10,8 @@ if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
 
 function connectWebSocket(sessionId: string) {
   if (ws) ws.close();
-  ws = new WebSocket(`wss://suvidha-g37k.onrender.com/ws/browser/${sessionId}`);
+  const wsUrlBase = (import.meta as any).env.VITE_WS_URL || 'ws://localhost:8000/ws/browser/';
+  ws = new WebSocket(`${wsUrlBase}${sessionId}`);
 
   ws.onopen = () => {
     console.log('WebSocket connected for session:', sessionId);
