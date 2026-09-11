@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Large Model Weights & Caches
+models/
+.cache/
+*.safetensors
+*.onnx
+*.bin
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs & Databases
+*.log
+*.sqlite
+*.sqlite3
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Specific Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Playwright & Testing Artifacts
+test-results/
+playwright-report/
+.playwright/
