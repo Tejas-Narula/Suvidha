@@ -48,14 +48,8 @@ async function handleCommand(commandData: any) {
     currentState = { status: 'RUNNING', session_id: currentSessionId, service_title: session?.service_title };
     broadcastState();
 
-    // 1. Open the target form URL
-    const tab = await chrome.tabs.create({ url: target.form_url, active: true });
-    activeTabId = tab.id!;
-    
-    // 2. Wait for page load (simplistic)
-    setTimeout(() => {
-      // 3. Inject content script to execute form filling
-      chrome.tabs.sendMessage(activeTabId!, {
+    const executeContentScript = (tabId: number) => {
+      chrome.tabs.sendMessage(tabId, {
         command: 'EXECUTE_FORM_FILL',
         fields: form_filling.fields,
         submission_config: submission_config
@@ -67,7 +61,6 @@ async function handleCommand(commandData: any) {
         } else if (res?.status === 'FIELD_REQUIRED') {
           currentState = { ...currentState, status: 'FIELD_REQUIRED', missing_field: res.field_name };
           broadcastState();
-          // Send event formatted as OTP_REQUIRED to use existing backend logic for missing fields
           sendBackendEvent('OTP_REQUIRED', { message: `Please ask the user for: ${res.field_name}` });
         } else if (res?.status === 'READY_FOR_SUBMISSION') {
           currentState = { ...currentState, status: 'READY_FOR_SUBMISSION' };
@@ -75,7 +68,25 @@ async function handleCommand(commandData: any) {
           sendBackendEvent('READY_FOR_SUBMISSION');
         }
       });
-    }, 4000); 
+    };
+
+    try {
+      if (activeTabId) {
+        executeContentScript(activeTabId);
+      } else {
+        const urlToOpen = target?.form_url || 'https://google.com';
+        const tab = await chrome.tabs.create({ url: urlToOpen, active: true });
+        activeTabId = tab.id!;
+        
+        setTimeout(() => {
+          executeContentScript(activeTabId!);
+        }, 4000); 
+      }
+    } catch (error: any) {
+      console.error("Error creating tab:", error);
+      currentState = { ...currentState, status: 'ERROR', error: error.toString() };
+      broadcastState();
+    }
   }
 }
 
