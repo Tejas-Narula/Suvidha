@@ -51,7 +51,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (field.action === 'type' || field.input_type === 'text') {
           const inputEl = el as HTMLInputElement | HTMLTextAreaElement;
           inputEl.focus();
-          inputEl.value = field.value;
+          
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+          const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+          
+          if (inputEl instanceof HTMLInputElement && nativeInputValueSetter) {
+            nativeInputValueSetter.call(inputEl, field.value);
+          } else if (inputEl instanceof HTMLTextAreaElement && nativeTextAreaValueSetter) {
+            nativeTextAreaValueSetter.call(inputEl, field.value);
+          } else {
+            inputEl.value = field.value;
+          }
+          
           inputEl.dispatchEvent(new Event('input', { bubbles: true }));
           inputEl.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (field.action === 'select_option' || field.input_type === 'dropdown') {

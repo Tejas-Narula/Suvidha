@@ -108,7 +108,9 @@ class BrowserAgentService:
             if "otp" in field_name.lower() or "otp" in selector.lower() or input_type == "otp":
                 has_otp = True
                 otp_selector = selector
-                val = collected.get("otp") or collected.get("provided_value") or ""
+                # Do not overwrite val here! _resolve_field_value already got it.
+                if not val:
+                    val = collected.get("otp") or collected.get("OTP") or ""
             
             if "captcha" in field_name.lower() or "captcha" in selector.lower() or input_type == "captcha":
                 has_captcha = True
