@@ -14,7 +14,7 @@ class GovernmentWebScraper:
     - Discovers service categories, navigation links, and grievance forms.
     - Sanitizes and structures DOM elements into token-optimized representations for Groq LLM.
     """
-    def __init__(self, headless: bool = True, timeout_ms: int = 30000):
+    def __init__(self, headless: bool = True, timeout_ms: int = 25000):
         self.headless = headless
         self.timeout_ms = timeout_ms
 
@@ -46,11 +46,8 @@ class GovernmentWebScraper:
             try:
                 logger.info(f"Navigating to {url}...")
                 await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
-                # Wait for any dynamic scripts or spinners to finish
-                try:
-                    await page.wait_for_load_state("networkidle", timeout=8000)
-                except Exception:
-                    pass  # Some gov sites stream or poll constantly
+                # Wait 2.5s for dynamic JS rendering and AJAX calls
+                await page.wait_for_timeout(2500)
 
                 # Extract title and rendered HTML
                 title = await page.title()
@@ -82,12 +79,14 @@ class GovernmentWebScraper:
             "portal", "track", "status", "scheme", "shikayat", "sewa", "pension", 
             "certificate", "ration", "water", "electricity", "tax", "municipal", "form",
             "servicesandschemes", "servicedetails", "details", "lodge", "pramanpatra",
+            "farmer", "kisan", "voter", "driving", "licence", "license", "cyber",
+            "anonymous", "report", "epf", "epfo", "member", "scholarship",
             "सेवा", "योजना", "शिकायत", "आवेदन", "पंजीकरण", "प्रमाणपत्र", "लॉग इन",
-            "मूलनिवास", "जाति", "राजस्व", "अप्लाई", "हेल्पलाइन"
+            "मूलनिवास", "जाति", "राजस्व", "अप्लाई", "हेल्पलाइन", "किसान"
         ]
         
         links = await page.eval_on_selector_all(
-            "a[href], button, [role='button'], .btn",
+            "a[href], button, [role='button'], .btn, .card",
             """elements => elements.map(el => ({
                 text: (el.innerText || el.textContent || '').trim().replace(/\\s+/g, ' '),
                 href: el.getAttribute('href') || '',
@@ -103,10 +102,18 @@ class GovernmentWebScraper:
             text = item.get("text", "")
             href = item.get("href", "")
             if not href or href.startswith("#") or href.startswith("javascript:"):
+                # If it's a button with action ID/text, keep it as an action selector
+                if item.get("id") or (text and len(text) < 40):
+                    selector = f"#{item['id']}" if item.get("id") else f"button:has-text('{text}')"
+                    filtered.append({
+                        "text": text,
+                        "url": base_url,
+                        "tag": item.get("tagName", ""),
+                        "selector": selector
+                    })
                 continue
 
             full_url = urljoin(base_url, href)
-            # Same origin or government subdomain links
             if urlparse(full_url).netloc and full_url not in seen_urls:
                 text_lower = text.lower()
                 href_lower = href.lower()
@@ -128,12 +135,12 @@ class GovernmentWebScraper:
         """
         soup = BeautifulSoup(html, "html.parser")
 
-        # 1. Strip script, style, svg, header/footer boilerplate to save token context
-        for element in soup(["script", "style", "noscript", "svg", "header", "footer", "nav"]):
+        # 1. Strip heavy scripts, styles, SVGs
+        for element in soup(["script", "style", "noscript", "svg"]):
             element.decompose()
 
         # 2. Extract Headings and Instructions
-        headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2", "h3"]) if h.get_text(strip=True)]
+        headings = [h.get_text(strip=True) for h in soup.find_all(["h1", "h2", "h3", "h4"]) if h.get_text(strip=True)]
         
         # 3. Extract Form Fields
         form_elements = []
@@ -159,6 +166,11 @@ class GovernmentWebScraper:
             if not label_text and el.parent and el.parent.name == "label":
                 label_text = el.parent.get_text(strip=True)
             if not label_text:
+                # Check previous sibling
+                prev = el.find_previous_sibling(["label", "span", "p"])
+                if prev and len(prev.get_text(strip=True)) < 50:
+                    label_text = prev.get_text(strip=True)
+            if not label_text:
                 label_text = el_placeholder or el_name or el_id or f"Field {idx+1}"
 
             # Options for dropdowns
@@ -175,6 +187,8 @@ class GovernmentWebScraper:
                 css_selector = f"#{el_id}"
             elif el_name:
                 css_selector = f"{tag_name}[name='{el_name}']"
+            elif el.get("formcontrolname"):
+                css_selector = f"{tag_name}[formcontrolname='{el.get('formcontrolname')}']"
             else:
                 css_selector = f"{tag_name}:nth-of-type({idx+1})"
 
@@ -186,16 +200,23 @@ class GovernmentWebScraper:
                 "id": el_id,
                 "placeholder": el_placeholder,
                 "is_required": el_required,
-                "options": options[:15]  # limit options preview
+                "options": options[:15]
             })
 
         # 4. Extract Submit and Action Buttons
         action_buttons = []
-        buttons = soup.find_all(["button", "input"])
+        buttons = soup.find_all(["button", "input", "a"])
         for btn in buttons:
             btn_type = btn.get("type", "").lower()
-            btn_text = btn.get_text(strip=True) or btn.get("value", "")
-            if btn.name == "button" or btn_type in ["submit", "button"]:
+            btn_text = (btn.get_text(strip=True) or btn.get("value", "") or "").replace("\n", " ").strip()
+            
+            # Keep meaningful action buttons
+            if (btn.name in ["button", "input"] and btn_type in ["submit", "button", ""]) or \
+               ("btn" in (btn.get("class") or []) or "button" in (btn.get("class") or [])):
+                
+                if not btn_text or len(btn_text) > 40:
+                    continue
+
                 btn_id = btn.get("id", "")
                 btn_name = btn.get("name", "")
                 if btn_id:
@@ -208,12 +229,12 @@ class GovernmentWebScraper:
                     selector = f"{btn.name}[type='{btn_type}']"
 
                 action_buttons.append({
-                    "text": btn_text or "Submit",
+                    "text": btn_text,
                     "type": btn_type or "button",
                     "selector": selector
                 })
 
-        # 5. Extract General Informational Text / Instructions (e.g. guidelines for filing)
+        # 5. Extract General Informational Text / Instructions
         paragraphs = [p.get_text(strip=True) for p in soup.find_all(["p", "li"]) if len(p.get_text(strip=True)) > 20]
         instruction_text = "\n".join(paragraphs[:10])
 

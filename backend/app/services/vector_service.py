@@ -13,9 +13,10 @@ class VectorService:
     """
     def __init__(self):
         self.client: Optional[Client] = None
-        if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+        key = getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", None) or getattr(settings, "SUPABASE_KEY", None)
+        if settings.SUPABASE_URL and key:
             try:
-                self.client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+                self.client = create_client(settings.SUPABASE_URL, key)
                 logger.info("Supabase pgvector client initialized successfully.")
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase client: {e}")

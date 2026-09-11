@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from app.schemas.sarvam import SarvamSubmitRequest, SarvamSubmitResponse, SarvamStatusResponse
 from app.services.session_manager import session_manager
 from app.services.vector_service import vector_service
+from app.services.browser_agent import browser_agent_service
 from app.utils.ids import generate_submission_id, generate_session_id
 from app.config import settings
 
@@ -20,8 +21,9 @@ async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify
     Submission endpoint (Voice Agent -> Backend):
     1. Extracts the user's intent / query from the application.
     2. Performs pgvector semantic similarity search against Supabase government schemas.
-    3. Persists the matched schema blueprint & workflow steps in the ApplicationSession.
-    4. Handles subsequent interactive updates when missing fields or OTP are provided.
+    3. Persists the matched schema blueprint in the ApplicationSession.
+    4. Generates dynamic field-mapped JSON and calls Browser Agent API (with MOCK VARIABLE).
+    5. Handles subsequent interactive updates when missing fields or OTP are provided.
     """
     if request.submission_id:
         # Interactive flow: Voice agent is providing missing information / OTP
@@ -38,6 +40,9 @@ async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify
                 exclude_none=True
             )
             session.collected_data.update(new_data)
+        
+        # Re-dispatch updated payload to Browser Agent
+        await browser_agent_service.dispatch_to_browser_agent(session)
         
         # Reset status so the Chrome extension can continue processing
         session.status = "in_progress"
@@ -88,6 +93,9 @@ async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify
             session.submission_message = "Application received. Searching government services..."
 
         session.status = "received"
+        
+        # Step 4: Generate dynamic field mapping and dispatch to Browser Agent API (with MOCK VARIABLE)
+        await browser_agent_service.dispatch_to_browser_agent(session)
         
         return SarvamSubmitResponse(
             submission_id=submission_id,

@@ -86,11 +86,12 @@ class GroqServiceExtractor:
             "You are an expert web scraping and form automation parser for government portals. "
             "Your task is to analyze scraped HTML DOM data and output a structured JSON blueprint matching EXACTLY this JSON schema:\n\n"
             f"{schema_json}\n\n"
-            "Key instructions:\n"
+            "CRITICAL INSTRUCTIONS (NO HALLUCINATION):\n"
             "1. Use snake_case keys (service_title, intent, department_name, portal_url, form_url, navigation_steps, form_fields, submit_button_selector, submission_steps, search_content).\n"
-            "2. Identify interactable input fields with accurate CSS selectors, types, and required status.\n"
-            "3. Identify the exact CSS selector for the final submit button.\n"
-            "4. Provide a clear list of submission_steps describing how to fill and submit the form.\n"
+            "2. navigation_steps MUST ALWAYS BE PROVIDED (at least 2-4 concrete steps showing how a user or browser bot navigates from portal_url to form_url or opens the specific service).\n"
+            "3. Identify ALL interactable input fields with accurate CSS selectors, input types (text, dropdown, textarea, date, number, otp, captcha), labels, and required status from the DOM elements.\n"
+            "4. Identify the precise CSS selector for the primary submit button.\n"
+            "5. submission_steps must be an exhaustive, step-by-step checklist explaining how to fill each field, handle OTP/auth verification, and submit.\n"
             "Respond ONLY with a valid JSON object."
         )
 

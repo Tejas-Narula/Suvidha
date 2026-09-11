@@ -23,3 +23,4 @@ class SessionStateResponse(BaseModel):
     user_action: Optional[str] = None
     workflow: Optional[Dict[str, Any]] = None
     matched_schema: Optional[Dict[str, Any]] = None
+    browser_payload: Optional[Dict[str, Any]] = None

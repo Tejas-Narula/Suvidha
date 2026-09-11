@@ -28,6 +28,10 @@ class ApplicationSession(BaseModel):
     query: Optional[str] = None
     matched_schema: Optional[Dict[str, Any]] = None
     
+    # Store dynamic Browser Agent payload & dispatch response
+    browser_payload: Optional[Dict[str, Any]] = None
+    browser_agent_response: Optional[Dict[str, Any]] = None
+    
     # Store submission info
     submission_id: Optional[str] = None
     submission_message: Optional[str] = None
