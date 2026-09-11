@@ -9,9 +9,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     for (const field of fields) {
       if (!field.selector) continue;
 
-      const el = document.querySelector(field.selector) as HTMLElement;
+      const elements = document.querySelectorAll(field.selector);
+      let el: HTMLElement | null = null;
       
-      // If the element doesn't exist on the page yet (e.g. conditional fields like UTS No), skip it
+      // Find the first visible element
+      for (let i = 0; i < elements.length; i++) {
+        const current = elements[i] as HTMLElement;
+        if (current.offsetWidth > 0 && current.offsetHeight > 0) {
+          el = current;
+          break;
+        }
+      }
+      
+      // Fallback to the first hidden element if no visible ones exist (e.g. they are rendered but CSS hidden, and we must check them)
+      if (!el && elements.length > 0) {
+        el = elements[0] as HTMLElement;
+      }
+      
+      // If the element doesn't exist on the page yet, skip it
       if (!el) continue;
       
       // Check if it's required but empty
