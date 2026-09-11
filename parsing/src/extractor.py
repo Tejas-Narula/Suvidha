@@ -30,12 +30,12 @@ class NavigationStep(BaseModel):
 class GovernmentServiceBlueprint(BaseModel):
     service_title: str = Field(description="Official name of the service (e.g., 'Sanitation & Garbage Disposal Complaint')")
     intent: str = Field(description="What civic issue or service this form handles (e.g., 'Report uncollected garbage, open drains, water leakage')")
-    department_name: str = Field(description="Government department or municipal body handling this form")
+    department_name: str = Field(default="Government Department", description="Government department or municipal body handling this form")
     portal_url: str = Field(description="Base portal URL")
     form_url: str = Field(description="Direct URL where the form resides")
     navigation_steps: List[NavigationStep] = Field(default_factory=list, description="Sequence of clicks to reach the form from the homepage")
     form_fields: List[FormField] = Field(default_factory=list, description="All interactable form input fields")
-    submit_button_selector: str = Field(description="Precise CSS selector for the primary submit/proceed button (e.g., '#btnSubmit', 'input[type=submit]')")
+    submit_button_selector: str = Field(default="button[type='submit']", description="Precise CSS selector for the primary submit/proceed button (e.g., '#btnSubmit', 'input[type=submit]')")
     submission_steps: List[str] = Field(default_factory=list, description="Step-by-step instructions to fill and submit the form")
     search_content: Optional[str] = Field(default=None, description="Rich textual representation used for generating vector embeddings in pgvector")
 
@@ -97,10 +97,10 @@ class GroqServiceExtractor:
         user_content = (
             f"Portal URL: {portal_url}\n"
             f"Form URL: {form_url}\n"
-            f"Page Headings: {json.dumps(dom_data.get('headings', []))}\n"
-            f"Page Instructions/Text: {dom_data.get('instruction_text', '')[:1500]}\n"
-            f"Form Fields Detected: {json.dumps(dom_data.get('form_elements', []), indent=2)}\n"
-            f"Action/Submit Buttons Detected: {json.dumps(dom_data.get('action_buttons', []), indent=2)}\n\n"
+            f"Page Headings: {json.dumps(dom_data.get('headings', [])[:5])}\n"
+            f"Page Instructions/Text: {dom_data.get('instruction_text', '')[:1000]}\n"
+            f"Form Fields Detected: {json.dumps(dom_data.get('form_elements', [])[:18], indent=2)}\n"
+            f"Action/Submit Buttons Detected: {json.dumps(dom_data.get('action_buttons', [])[:8], indent=2)}\n\n"
             "Generate the complete GovernmentServiceBlueprint in valid JSON format."
         )
 
