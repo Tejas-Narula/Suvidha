@@ -99,6 +99,7 @@ async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify
         
         return SarvamSubmitResponse(
             submission_id=submission_id,
+            session_id=session_id,
             status="received"
         )
 

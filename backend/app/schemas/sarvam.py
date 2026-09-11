@@ -12,6 +12,7 @@ class SarvamSubmitRequest(BaseModel):
 
 class SarvamSubmitResponse(BaseModel):
     submission_id: str
+    session_id: Optional[str] = None
     status: str
 
 class SarvamStatusResponse(BaseModel):

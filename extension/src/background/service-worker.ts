@@ -3,6 +3,11 @@ let activeTabId: number | null = null;
 let currentState: any = { status: 'DISCONNECTED', session_id: '' };
 let currentSessionId: string | null = null;
 
+// Allow the side panel to open when the extension icon is clicked
+if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+}
+
 function connectWebSocket(sessionId: string) {
   if (ws) ws.close();
   ws = new WebSocket(`wss://suvidha-g37k.onrender.com/ws/browser/${sessionId}`);
