@@ -164,6 +164,28 @@ class VectorService:
                 "similarity": 0.88
             }
 
+        if "railway" in query_lower or "train" in query_lower or "railmadad" in query_lower:
+            return {
+                "service_title": "Railway Grievance (RailMadad)",
+                "intent": "Register a complaint or grievance regarding a railway journey",
+                "department_name": "Ministry of Railways",
+                "portal_url": "https://railmadad.indianrailways.gov.in",
+                "form_url": "https://railmadad.indianrailways.gov.in/madad/final/home.jsp",
+                "navigation_steps": [
+                    {"step_number": 1, "action_description": "Open RailMadad Portal", "element_selector": "https://railmadad.indianrailways.gov.in/madad/final/home.jsp"}
+                ],
+                "form_fields": [
+                    {"field_name": "Mobile No", "input_type": "text", "css_selector": "input[placeholder='Mobile No.']", "is_required": True},
+                    {"field_name": "OTP", "input_type": "otp", "css_selector": "input[placeholder='Enter OTP']", "is_required": True},
+                    {"field_name": "Journey Details", "input_type": "dropdown", "css_selector": "select[title='Journey Details']", "is_required": True},
+                    {"field_name": "PNR No", "input_type": "text", "css_selector": "input[placeholder='PNR No']", "is_required": True},
+                    {"field_name": "Description", "input_type": "textarea", "css_selector": "textarea[placeholder='Enter Description...']", "is_required": True}
+                ],
+                "submit_button_selector": "button:contains('Proceed')",
+                "submission_steps": ["Enter Mobile No", "Verify OTP", "Select Journey Details as PNR", "Enter PNR No", "Enter Grievance Description", "Click Proceed"],
+                "similarity": 0.96
+            }
+
         return None
 
 vector_service = VectorService()
