@@ -24,12 +24,15 @@ async def get_session_state(session_id: str):
     return SessionStateResponse(
         session_id=session.session_id,
         service_id=session.service_id,
+        query=session.query,
         browser_connected=session.browser_connected,
         voice_connected=session.voice_connected,
         status=session.status,
         current_step=session.current_step,
         waiting_for_user=session.waiting_for_user,
-        user_action=session.user_action
+        user_action=session.user_action,
+        workflow=session.workflow,
+        matched_schema=session.matched_schema
     )
 
 @router.post("/{session_id}/confirm-submission")

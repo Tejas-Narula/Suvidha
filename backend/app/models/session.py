@@ -24,6 +24,10 @@ class ApplicationSession(BaseModel):
     # Store collected data from Sarvam
     collected_data: Dict[str, Any] = {}
     
+    # Store extracted query & matched pgvector schema/blueprint
+    query: Optional[str] = None
+    matched_schema: Optional[Dict[str, Any]] = None
+    
     # Store submission info
     submission_id: Optional[str] = None
     submission_message: Optional[str] = None

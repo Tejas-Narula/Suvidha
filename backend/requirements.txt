@@ -5,3 +5,5 @@ pydantic-settings
 websockets
 supabase
 python-dotenv
+sentence-transformers>=3.0.0
+numpy>=1.24.0
