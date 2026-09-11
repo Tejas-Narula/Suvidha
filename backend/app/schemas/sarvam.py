@@ -5,6 +5,9 @@ class SarvamSubmitRequest(BaseModel):
     # Flexible schema to accept any fields collected by the voice agent
     model_config = ConfigDict(extra='allow')
     service_type: str
+    submission_id: Optional[str] = None
+    provided_field: Optional[str] = None
+    provided_value: Optional[str] = None
     case_reference: Optional[str] = None
 
 class SarvamSubmitResponse(BaseModel):

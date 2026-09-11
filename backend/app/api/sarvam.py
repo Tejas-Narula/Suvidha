@@ -15,26 +15,47 @@ def verify_api_key(authorization: str = Header(...)):
 async def sarvam_submit(request: SarvamSubmitRequest, auth: str = Depends(verify_api_key)):
     """
     Submission endpoint (agent -> backend)
-    Called once, mid-call, after the caller confirms all details.
+    Can be called initially with just the name, and subsequently with a submission_id to provide missing fields.
     """
-    # For a real implementation, we could associate this with an existing session via call_id.
-    # We will create a submission ID that the agent can poll.
-    submission_id = generate_submission_id()
-    
-    # Store the collected data in a new or existing session
-    # For simplicity, we create a new session just for this submission for the extension to pick up.
-    from app.utils.ids import generate_session_id
-    session_id = generate_session_id()
-    session = session_manager.create_session(session_id)
-    session.service_id = request.service_type
-    session.collected_data = request.model_dump(exclude={"service_type", "case_reference"})
-    session.submission_id = submission_id
-    session.status = "received"
-    
-    return SarvamSubmitResponse(
-        submission_id=submission_id,
-        status="received"
-    )
+    if request.submission_id:
+        # Interactive flow: Voice agent is providing missing information
+        session = session_manager.get_session_by_submission_id(request.submission_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Submission ID not found")
+        
+        # Update session with new data
+        if request.provided_field and request.provided_value:
+            session.collected_data[request.provided_field] = request.provided_value
+        else:
+            # Fallback for dynamic fields just in case
+            new_data = request.model_dump(exclude={"service_type", "case_reference", "submission_id", "provided_field", "provided_value"})
+            session.collected_data.update(new_data)
+        
+        # Reset status so the Chrome extension can continue processing
+        session.status = "in_progress"
+        session.field_with_issue = None
+        session.submission_message = "New information received, resuming automation..."
+        
+        return SarvamSubmitResponse(
+            submission_id=session.submission_id,
+            status="received_update"
+        )
+    else:
+        # Initial submission
+        submission_id = generate_submission_id()
+        
+        from app.utils.ids import generate_session_id
+        session_id = generate_session_id()
+        session = session_manager.create_session(session_id)
+        session.service_id = request.service_type
+        session.collected_data = request.model_dump(exclude={"service_type", "case_reference", "submission_id"})
+        session.submission_id = submission_id
+        session.status = "received"
+        
+        return SarvamSubmitResponse(
+            submission_id=submission_id,
+            status="received"
+        )
 
 @router.get("/submit/{submission_id}/status", response_model=SarvamStatusResponse)
 async def get_submission_status(submission_id: str, auth: str = Depends(verify_api_key)):
