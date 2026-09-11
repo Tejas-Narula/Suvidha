@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Suvidha Browser Agent",
+  "version": "1.0.0",
+  "description": "Browser execution agent for Suvidha government service automation.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Suvidha Browser Agent"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {}
+}

@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  browser-agent-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      BROWSER_AGENT_PORT: 8000
+      MAIN_API_URL: ${MAIN_API_URL:-http://host.docker.internal:8000}
+      BROWSER_AGENT_API_KEY: ${BROWSER_AGENT_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    restart: unless-stopped

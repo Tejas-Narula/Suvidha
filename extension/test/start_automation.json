@@ -1,0 +1,88 @@
+{
+  "event": "START_AUTOMATION",
+  "timestamp": "2026-09-12T00:30:00Z",
+  "session": {
+    "session_id": "sess_f73cc2c3c81d",
+    "submission_id": "SUB11706106",
+    "service_title": "Streetlight Grievance & Outage Registration",
+    "department": "Municipal Corporation - Electrical Division"
+  },
+  "target": {
+    "portal_url": "http://localhost:9000",
+    "form_url": "http://localhost:9000/complaints/new"
+  },
+  "navigation_flow": [
+    {
+      "step_number": 1,
+      "action": "navigate",
+      "target_url": "http://localhost:9000",
+      "description": "Open Civic Portal Homepage"
+    },
+    {
+      "step_number": 2,
+      "action": "click",
+      "selector": "#btnGrievance",
+      "description": "Click on 'Register Grievance' button"
+    }
+  ],
+  "form_filling": {
+    "mode": "auto_fill",
+    "fields": [
+      {
+        "field_name": "Full Name",
+        "input_type": "text",
+        "selector": "#txtName",
+        "value": null,
+        "is_required": true,
+        "action": "type",
+        "value_source": "user"
+      },
+      {
+        "field_name": "Mobile Number",
+        "input_type": "text",
+        "selector": "#txtMobile",
+        "value": "9876543210",
+        "is_required": true,
+        "action": "type"
+      },
+      {
+        "field_name": "Department",
+        "input_type": "dropdown",
+        "selector": "select[name='department']",
+        "value": "Electricity / Streetlights",
+        "option_value": "1",
+        "is_required": true,
+        "action": "select_option"
+      },
+      {
+        "field_name": "Ward Address",
+        "input_type": "textarea",
+        "selector": "#txtAddress",
+        "value": "Ward 5, Vaishali Nagar, near City Park",
+        "is_required": false,
+        "action": "type"
+      }
+    ]
+  },
+  "submission_config": {
+    "submit_button_selector": "#btnSubmitGrievance",
+    "require_user_confirmation": true,
+    "otp_interceptor": {
+      "has_otp": true,
+      "otp_input_selector": "#txtOtp",
+      "otp_trigger_button": "#btnSendOtp",
+      "verify_button_selector": "#btnVerifyOtp"
+    },
+    "captcha_interceptor": {
+      "has_captcha": false,
+      "captcha_image_selector": null,
+      "captcha_input_selector": null
+    }
+  },
+  "instructions": [
+    "1. Navigate to target portal and click grievance registration.",
+    "2. Fill form fields in sequence using provided selectors and values.",
+    "3. If OTP input is detected, trigger OTP_REQUIRED event over WebSocket.",
+    "4. Await READY_FOR_SUBMISSION confirmation before clicking #btnSubmitGrievance."
+  ]
+}

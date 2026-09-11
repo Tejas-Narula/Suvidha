@@ -1,0 +1,24 @@
+{
+  "name": "suvidha-extension",
+  "version": "1.0.0",
+  "description": "Suvidha Browser Automation Extension",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.263",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}
