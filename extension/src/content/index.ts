@@ -11,6 +11,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       const el = document.querySelector(field.selector) as HTMLElement;
       
+      // If the element doesn't exist on the page yet (e.g. conditional fields like UTS No), skip it
+      if (!el) continue;
+      
       // Check if it's required but empty
       if (field.is_required && !field.value) {
         const isOtpField = field.field_name.toLowerCase().includes('otp') || field.selector.toLowerCase().includes('otp') || field.input_type === 'otp';
