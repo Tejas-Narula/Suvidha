@@ -13,7 +13,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       
       // Check if it's required but empty
       if (field.is_required && !field.value) {
-        if (field.field_name.toLowerCase().includes('otp') || submission_config?.otp_interceptor?.requires_otp) {
+        const isOtpField = field.field_name.toLowerCase().includes('otp') || field.selector.toLowerCase().includes('otp') || field.input_type === 'otp';
+        
+        if (isOtpField) {
           otpRequired = true;
           // Optionally click trigger button
           if (submission_config?.otp_interceptor?.otp_trigger_button) {
