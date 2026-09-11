@@ -10,8 +10,8 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-def verify_api_key(authorization: str = Header(...)):
-    if not authorization.startswith("Bearer ") or authorization.split(" ")[1] != settings.API_KEY:
+def verify_api_key(authorization: str | None = Header(None)):
+    if not authorization or not authorization.startswith("Bearer ") or authorization.split(" ")[1] != settings.API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API Key")
     return authorization
 
