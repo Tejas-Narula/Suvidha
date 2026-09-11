@@ -20,6 +20,10 @@ class ConnectionManager:
         if session:
             session.browser_connected = True
             session.status = "in_progress"
+            
+            # If the backend already generated the payload before the extension connected, send it now!
+            if hasattr(session, 'browser_payload') and session.browser_payload:
+                await self.send_command(session_id, session.browser_payload)
 
     def disconnect(self, session_id: str):
         if session_id in self.active_connections:
