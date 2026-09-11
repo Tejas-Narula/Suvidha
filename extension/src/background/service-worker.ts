@@ -1,42 +1,16 @@
 let ws: WebSocket | null = null;
 let activeTabId: number | null = null;
-let currentState: any = { status: 'WAITING_FOR_PROCESS' };
-let extensionId = "ext_" + Math.random().toString(36).substr(2, 9);
-let currentProcessId: string | null = null;
+let currentState: any = { status: 'DISCONNECTED', session_id: '' };
+let currentSessionId: string | null = null;
 
-async function registerExtension() {
-  try {
-    const res = await fetch('http://localhost:8000/v1/extensions/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        extension_id: extensionId,
-        browser_session_id: "session_1",
-        status: "ONLINE"
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.assigned_process_id && data.assigned_process_id !== currentProcessId) {
-        currentProcessId = data.assigned_process_id;
-        connectWebSocket(currentProcessId!);
-      }
-    }
-  } catch (e) {
-    console.log("Failed to register with Browser Agent API", e);
-  }
-}
-
-// Periodically register
-setInterval(registerExtension, 3000);
-registerExtension();
-
-function connectWebSocket(processId: string) {
+function connectWebSocket(sessionId: string) {
   if (ws) ws.close();
-  ws = new WebSocket(`ws://localhost:8000/v1/ws/${processId}`);
+  ws = new WebSocket(`wss://suvidha-g37k.onrender.com/ws/browser/${sessionId}`);
 
   ws.onopen = () => {
-    console.log('WebSocket connected for process:', processId);
+    console.log('WebSocket connected for session:', sessionId);
+    currentState = { status: 'WAITING_FOR_PROCESS', session_id: sessionId };
+    broadcastState();
   };
 
   ws.onmessage = (event) => {
@@ -46,92 +20,56 @@ function connectWebSocket(processId: string) {
 
   ws.onclose = () => {
     console.log('WebSocket disconnected');
+    currentState = { status: 'DISCONNECTED', session_id: '' };
+    broadcastState();
     ws = null;
   };
 }
 
 async function handleCommand(commandData: any) {
-  const { command_id, command, payload } = commandData;
+  const { command, session, target, form_filling, submission_config } = commandData;
 
-  const sendResponse = (event: string, additionalPayload: any = {}) => {
+  const sendBackendEvent = (type: string, payloadData: any = {}) => {
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
-        event,
-        command_id,
-        payload: additionalPayload
+        type,
+        payload: payloadData
       }));
     }
   };
 
-  if (command === 'OPEN_TAB') {
-    currentState = { status: 'STARTING', process_id: currentProcessId };
+  if (command === 'FILL_AND_PREPARE_SUBMISSION') {
+    currentState = { status: 'RUNNING', session_id: currentSessionId, service_title: session?.service_title };
     broadcastState();
 
-    const tab = await chrome.tabs.create({ url: payload.url, active: true });
+    // 1. Open the target form URL
+    const tab = await chrome.tabs.create({ url: target.form_url, active: true });
     activeTabId = tab.id!;
     
-    // Simplistic wait for now
+    // 2. Wait for page load (simplistic)
     setTimeout(() => {
-      sendResponse('TAB_CREATED', { tab_id: tab.id, url: tab.url });
-    }, 2000); 
-  } 
-  else if (command === 'NAVIGATE') {
-    if (!activeTabId) return;
-    await chrome.tabs.update(activeTabId, { url: payload.url });
-    setTimeout(() => {
-      sendResponse('ACTION_COMPLETED');
-    }, 2000);
-  }
-  else if (command === 'CLICK_SELECTOR') {
-    if (!activeTabId) return;
-    chrome.tabs.sendMessage(activeTabId, {
-      command: 'CLICK_SELECTOR',
-      selector: payload.selector
-    }, (res) => {
-      if (res?.status === 'ACTION_COMPLETED') {
-        sendResponse('ACTION_COMPLETED');
-      } else {
-        sendResponse('ACTION_FAILED', { reason: res?.reason || 'UNKNOWN' });
-      }
-    });
-  }
-  else if (command === 'FILL_FIELD') {
-    if (!activeTabId) return;
-    chrome.tabs.sendMessage(activeTabId, {
-      command: 'FILL_FIELD',
-      selector: payload.selector,
-      value: payload.value
-    }, (res) => {
-      if (res?.status === 'ACTION_COMPLETED') {
-        sendResponse('ACTION_COMPLETED');
-      } else {
-        sendResponse('ACTION_FAILED', { reason: res?.reason || 'UNKNOWN' });
-      }
-    });
-  }
-  else if (command === 'SELECT_OPTION') {
-    if (!activeTabId) return;
-    chrome.tabs.sendMessage(activeTabId, {
-      command: 'SELECT_OPTION',
-      selector: payload.selector,
-      value: payload.value
-    }, (res) => {
-      if (res?.status === 'ACTION_COMPLETED') sendResponse('ACTION_COMPLETED');
-      else sendResponse('ACTION_FAILED', { reason: res?.reason || 'UNKNOWN' });
-    });
-  }
-  else if (command === 'USER_INPUT_PROVIDED') {
-    currentState = { status: 'RUNNING', process_id: currentProcessId };
-    broadcastState();
-    // In a real system, the process manager handles continuing the flow
-  }
-  else if (command === 'CONFIRM_SUBMISSION') {
-    currentState = { status: 'RUNNING', process_id: currentProcessId };
-    broadcastState();
-  }
-  else if (command === 'AUTH_COMPLETED_BY_USER') {
-    currentState = { status: 'RUNNING', process_id: currentProcessId };
-    broadcastState();
+      // 3. Inject content script to execute form filling
+      chrome.tabs.sendMessage(activeTabId!, {
+        command: 'EXECUTE_FORM_FILL',
+        fields: form_filling.fields,
+        submission_config: submission_config
+      }, (res) => {
+        if (res?.status === 'OTP_REQUIRED') {
+          currentState = { ...currentState, status: 'OTP_REQUIRED' };
+          broadcastState();
+          sendBackendEvent('OTP_REQUIRED', { message: 'OTP required on government website' });
+        } else if (res?.status === 'FIELD_REQUIRED') {
+          currentState = { ...currentState, status: 'FIELD_REQUIRED', missing_field: res.field_name };
+          broadcastState();
+          // Send event formatted as OTP_REQUIRED to use existing backend logic for missing fields
+          sendBackendEvent('OTP_REQUIRED', { message: `Please ask the user for: ${res.field_name}` });
+        } else if (res?.status === 'READY_FOR_SUBMISSION') {
+          currentState = { ...currentState, status: 'READY_FOR_SUBMISSION' };
+          broadcastState();
+          sendBackendEvent('READY_FOR_SUBMISSION');
+        }
+      });
+    }, 4000); 
   }
 }
 
@@ -143,5 +81,9 @@ function broadcastState() {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_STATE') {
     sendResponse(currentState);
+  } else if (message.type === 'CONNECT_SESSION') {
+    currentSessionId = message.session_id;
+    connectWebSocket(message.session_id);
+    sendResponse({ success: true });
   }
 });
